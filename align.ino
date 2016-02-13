@@ -1,9 +1,13 @@
 
-const int sensors = 5; 
+const int sensors = 5;
+const int numReadings = 50;
 
 int buzzerPins[] = {0,1,2,3,4}; // stores buzzer pins, add more for more buzzers
-int calibrate[5]; // stores "straight-back" state, set based on testing, think of better name?
-int sensorReadings[5]; // will store sensor input 0 to 1023
+int initial[sensors]; // stores "straight-back" state, set based on testing, think of better name?
+int rawRead[sensors][numReadings]; // will store last 100 sensor input 0 to 1023
+int aggRead[sensors];
+int smoothRead[sensors];
+int readIndex = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -11,36 +15,45 @@ void setup() {
   for(int i = 0; i<sensors; i++){
     digitalWrite(buzzerPins[i],OUTPUT);
   }
-  // calibrate
-  for(int i = 0; i<sensors; i++){
-    calibrate[i] = 100; // change to some reading?
-  }
+  //calibrate();
 }
 
 void loop() {
-  test();
-  delay(1000);
+  readSensors();
+  delay(10);
 }
 
-void test(){
+void calibrate(){
+  delay(1);
+}
+
+void testA0(){
   int input = analogRead(A0);
   Serial.println(input);
 }
 
-void update(){
+void readSensors(){
+  for(int i = 0; i<sensors; i++){
+    smoothRead[i]=analogRead(A0+i);
+    Serial.print(smoothRead[i]);
+    Serial.print(" ");
+  }
+  Serial.println();
+}
+
+void smoothReadSensors(){
   //read new sensor values
   for(int i = 0; i<sensors; i++){
-    sensorReadings[i] = analogRead(A0+i);
+    aggRead[i]-=rawRead[i][readIndex];
+    rawRead[i][readIndex] = analogRead(A0+i);
+    aggRead[i]+=rawRead[i][readIndex];
+    smoothRead[i]=aggRead[i]/numReadings;
+    Serial.print(smoothRead[i]);
+    Serial.print(" ");
   }
-
-  //test output w/ LEDS
-  
-  for(int i = 0; i<sensors; i++){
-    if(sensorReadings[i]-calibrate[i]<0){
-      digitalWrite(buzzerPins[i],HIGH);  
-    } else {
-      digitalWrite(buzzerPins[i],LOW);
-    }
-  }
+  readIndex = (readIndex+1) % numReadings;
+  Serial.println();
 }
+ 
+
 
